@@ -17,17 +17,19 @@ public:
                     const std::string& address,
                     const std::string& port,
                     unsigned int option = 0):
-        loop_(loop),
-        acceptor_(address, port, option)
+        acceptor_(loop, address, port, option)
     {}
 
     bool start();
 
     void set_connect_callback(on_connect_callback cb);
 
+    void set_on_message_callback(on_message_callback cb);
+
+    void set_disconnect_callback(on_disconnect_callback cb);
+
 private:
     Acceptor acceptor_;
-    EventLoop& loop_;
     std::map<int, tcp_connection_ptr> connections;
 
 };

@@ -16,30 +16,38 @@ enum class EVENT_OPEATION {
 
 typedef std::function<void(void)> callback;
 
+enum class EVENT_STATE {
+    INIT = 0,
+    READ = 1,
+    WRITE = 2,
+    CLOSED = 3
+};
+
 class Event {
 public:
     Event(int fd);
     void set_read_callback(callback cb) { read_cb_ = std::move(cb); }
     void set_write_callback(callback cb) { write_cb_ = std::move(cb); }
     void set_close_callback(callback cb) { close_cb_ = std::move(cb); }
-    void set_error_callback(callback cb) { error_cb_ = std::move(cb); }
 
     void handle_event();
 
+    void set_event_result_state(EVENT_STATE state) { state_ = state; }
+
     EVENT_OPEATION get_operation() { return operation_; }
     void set_operation(const EVENT_OPEATION& op) { operation_ = op; }
-    int get_mask() { return mask_; }
     void update_mask(int mask) { mask_ |= mask; }
+    int get_mask() { return mask_; }
     int get_fd() { return fd_; }
 
 private:
     int fd_;
     int mask_;
+    EVENT_STATE state_;
     EVENT_OPEATION operation_;
     callback read_cb_;
     callback write_cb_;
     callback close_cb_;
-    callback error_cb_;
 };
 
 }

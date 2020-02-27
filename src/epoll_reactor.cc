@@ -17,10 +17,10 @@ bool EpollReactor::add_event(Event* event) {
     struct epoll_event ee;
     ::bzero(&ee, sizeof(ee));
     EVENT_OPEATION operation = event->get_operation();
+    ee.events = event->get_mask();
     int op = operation == EVENT_OPEATION::INIT ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
-    ee.data.fd = event->get_fd();
     ee.data.ptr = event;
-    return epoll_ctl(epoll_fd_, op, ee.data.fd, &ee) != -1;
+    return epoll_ctl(epoll_fd_, op, event->get_fd(), &ee) != -1;
 }
 
 bool EpollReactor::del_event(Event* event) {
@@ -37,5 +37,15 @@ void EpollReactor::poll(std::vector<Event*>& events) {
         return;
     for (int i = 0; i < res; ++i) {
         int what = events_[i].events;
+        Event* event = static_cast<Event*>(events_[i].data.ptr);
+        EVENT_STATE state = EVENT_STATE::INIT;
+        if (what & (EPOLLIN | EPOLLHUP))
+            state = EVENT_STATE::READ;
+        else if (what & EPOLLOUT)
+            state = EVENT_STATE::WRITE;
+        else if (what & (EPOLLERR | EPOLLRDHUP))
+            state = EVENT_STATE::CLOSED;
+        event->set_event_result_state(state);
+        events.push_back(event);
     }
 }

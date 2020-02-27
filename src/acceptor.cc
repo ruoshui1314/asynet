@@ -6,9 +6,12 @@
 
 using namespace asynet;
 
-Acceptor::Acceptor(const std::string& address,
+Acceptor::Acceptor(EventLoop& loop,
+                const std::string& address,
                 const std::string& port,
-                unsigned int option): socket_(address, port) {
+                unsigned int option):
+    loop_(loop),
+    socket_(address, port) {
     socket_.set_option(option);
 }
 
@@ -41,12 +44,20 @@ bool Acceptor::listen() {
     return true;
 }
 
-bool Acceptor::enable_read(EventLoop& loop) {
-    return loop.add_read_event(event_.get());
+bool Acceptor::enable_read() {
+    return loop_.add_read_event(event_.get());
 }
 
 void Acceptor::set_on_connect_callback(on_connect_callback& cb) {
     on_connect_cb_ = std::move(cb);
+}
+
+void Acceptor::set_on_message_callback(on_message_callback& cb) {
+    on_message_cb_ = std::move(cb);
+}
+
+void Acceptor::set_on_disconnect_callback(on_disconnect_callback& cb) {
+    on_disconnect_cb_ = std::move(cb);
 }
 
 void Acceptor::handle_read_callback() {
@@ -72,8 +83,12 @@ void Acceptor::handle_read_callback() {
     std::string addr(ip);
     std::string port_s(std::to_string(port));
     tcp_connection_ptr connection =
-        std::make_shared<TcpConnection>(fd, addr, port_s);
+        std::make_shared<TcpConnection>(loop_, fd, addr, port_s);
     connections_[fd] = connection;
     if (on_connect_cb_)
         on_connect_cb_(connection);
+    if (on_message_cb_)
+        connection->set_on_message_callback(on_message_cb_);
+    if (on_disconnect_cb_)
+        connection->set_on_disconnect_callback(on_disconnect_cb_);
 }
