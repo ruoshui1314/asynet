@@ -30,8 +30,6 @@ public:
 
 private:
     Acceptor acceptor_;
-    std::map<int, tcp_connection_ptr> connections;
-
 };
 
 }

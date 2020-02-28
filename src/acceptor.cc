@@ -83,8 +83,8 @@ void Acceptor::handle_read_callback() {
     std::string addr(ip);
     std::string port_s(std::to_string(port));
     tcp_connection_ptr connection =
-        std::make_shared<TcpConnection>(loop_, fd, addr, port_s);
-    connections_[fd] = connection;
+        std::make_shared<TcpConnection>(fd, addr, port_s);
+    connection->enable_read(loop_);
     if (on_connect_cb_)
         on_connect_cb_(connection);
     if (on_message_cb_)

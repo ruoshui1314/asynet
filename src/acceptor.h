@@ -38,7 +38,6 @@ private:
     on_connect_callback on_connect_cb_;
     on_message_callback on_message_cb_;
     on_disconnect_callback on_disconnect_cb_;
-    std::map<int, tcp_connection_ptr> connections_;
 };
 
 }

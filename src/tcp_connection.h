@@ -3,6 +3,7 @@
 
 #include "event.h"
 #include "socket.h"
+#include "struct.h"
 
 #include <memory>
 #include <string>
@@ -15,8 +16,7 @@ const int MAX_BUFFER_SIZE = 1024;
 
 class TcpConnection: public std::enable_shared_from_this<TcpConnection> {
 public:
-    TcpConnection(EventLoop& loop_,
-                int fd,
+    TcpConnection(int fd,
                 const std::string& address,
                 const std::string& port);
     std::string get_address() { return socket_.get_address(); }
@@ -30,17 +30,18 @@ public:
         on_disconnect_cb_ = cb;
     }
 
-    void on_read_callback();
+    void on_read_callback(const tcp_connection_ptr& conn);
 
-    void on_write_callback();
+    void on_write_callback(const tcp_connection_ptr& conn);
 
-    void on_close_callback();
+    void on_close_callback(const tcp_connection_ptr& conn);
 
     void send_message(const std::string& message);
 
+    void enable_read(EventLoop& loop);
+
 private:
-    EventLoop& loop_;
-    Event event_;
+    std::unique_ptr<Event> event_;
     Socket socket_;
     on_message_callback on_message_cb_;
     on_disconnect_callback on_disconnect_cb_;
