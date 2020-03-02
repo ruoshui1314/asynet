@@ -2,6 +2,7 @@
 #include "struct.h"
 
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 using namespace asynet;
@@ -42,4 +43,11 @@ void Socket::close() {
         return;
     ::close(fd_);
     fd_ = -1;
+}
+
+int Socket::get_bytes_readable_on_socket() {
+    int n = -1;
+    if (::ioctl(fd_, FIONREAD, &n) < 0)
+        return -1;
+    return n;
 }

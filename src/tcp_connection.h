@@ -4,6 +4,7 @@
 #include "event.h"
 #include "socket.h"
 #include "struct.h"
+#include "buffer.h"
 
 #include <memory>
 #include <string>
@@ -11,8 +12,6 @@
 namespace asynet {
 
 class EventLoop;
-
-const int MAX_BUFFER_SIZE = 1024;
 
 class TcpConnection: public std::enable_shared_from_this<TcpConnection> {
 public:
@@ -36,7 +35,7 @@ public:
 
     void on_close_callback(const tcp_connection_ptr& conn);
 
-    void send_message(const std::string& message);
+    void send_message(std::string&& message);
 
     void enable_read(EventLoop& loop);
 
@@ -45,8 +44,8 @@ private:
     Socket socket_;
     on_message_callback on_message_cb_;
     on_disconnect_callback on_disconnect_cb_;
-    char buffer_[MAX_BUFFER_SIZE];
-    std::string message_;
+    Buffer input_;
+    Buffer output_;
 };
 
 }

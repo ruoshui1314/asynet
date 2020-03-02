@@ -1,8 +1,6 @@
 #include "tcp_connection.h"
 #include "event_loop.h"
 
-#include <unistd.h>
-
 using namespace asynet;
 
 TcpConnection::TcpConnection(int fd,
@@ -20,11 +18,10 @@ void TcpConnection::enable_read(EventLoop& loop) {
 }
 
 void TcpConnection::on_read_callback(const tcp_connection_ptr& conn) {
-    int n = ::read(socket_.get_fd(), buffer_, MAX_BUFFER_SIZE);
+    int n = input_.read_socket(socket_.get_fd());
     if (n > 0) {
-        message_ = buffer_;
         if (on_message_cb_)
-            on_message_cb_(shared_from_this(), message_);
+            on_message_cb_(shared_from_this(), input_);
     } else if (n == 0) {
         on_close_callback(conn);
     }
@@ -34,8 +31,8 @@ void TcpConnection::on_write_callback(const tcp_connection_ptr& conn) {
 
 }
 
-void TcpConnection::send_message(const std::string& message) {
-    int n = ::write(socket_.get_fd(), message.c_str(), message.length());
+void TcpConnection::send_message(std::string&& message) {
+    int n = output_.write_socket(socket_.get_fd(), std::forward<std::string>(message));
     if (n < 0)
         on_disconnect_cb_(shared_from_this(), -1);
 }

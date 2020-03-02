@@ -37,6 +37,8 @@ public:
 
     bool set_socket_option(unsigned int option, bool on = true);
 
+    int get_bytes_readable_on_socket();
+
 private:
     int fd_;
     const std::string address_;
