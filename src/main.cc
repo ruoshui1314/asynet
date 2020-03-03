@@ -24,19 +24,6 @@ void on_disconnect(const tcp_connection_ptr& conn, int error) {
     cout << "on disconnect:" << error << endl;
 }
 
-class Test{
-public:
-    Test() {
-        cout << "test construct" << endl;
-    }
-    Test(Test&& t) {
-        cout << "move constructive " << endl;
-    }
-    Test(const Test& t) {
-        cout << "copy constructive" << endl;
-    }
-};
-
 int main() {
     EventLoop loop;
     std::string addr = "0.0.0.0";

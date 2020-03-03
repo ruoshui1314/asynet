@@ -18,7 +18,7 @@ public:
     explicit Acceptor(EventLoop& loop,
                     const std::string& address,
                     const std::string& port,
-                    unsigned int option);
+                    unsigned int option = OPT_REUSEABLE_PORT);
 
     bool listen();
 

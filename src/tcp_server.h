@@ -15,9 +15,8 @@ class TcpServer {
 public:
     explicit TcpServer(EventLoop& loop,
                     const std::string& address,
-                    const std::string& port,
-                    unsigned int option = 0):
-        acceptor_(loop, address, port, option)
+                    const std::string& port):
+        acceptor_(loop, address, port)
     {}
 
     bool start();

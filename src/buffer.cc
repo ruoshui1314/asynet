@@ -17,6 +17,13 @@ BufferBlock::BufferBlock(BufferBlock&& block) {
     std::swap(block.write_index_, write_index_);
 }
 
+int BufferBlock::append_to_block(const char* p, int n) {
+    int length = n <= get_free_space() ? n : get_free_space();
+    data_.insert(data_.begin() + write_index_, p, p+length);
+    write_index_ += length;
+    return length;
+}
+
 void BufferBlock::reset() {
     read_index_ = 0;
     write_index_ = 0;
@@ -32,11 +39,15 @@ std::string BufferBlock::to_string() {
     return s; 
 }
 
-Buffer::Buffer(): current_index_(0) {}
-
 BufferBlock& Buffer::get_available_block() {
-    if (get_free_space() == 0)
-        blocks_.push_back(BufferBlock());
+    if (current_index_ != -1 && current_index_ < blocks_.size()) {
+        if (blocks_[current_index_].get_free_space() != 0)
+            return blocks_[current_index_];
+        if (current_index_ + 1 < blocks_.size())
+            return blocks_[current_index_];
+    }
+    blocks_.push_back(BufferBlock());
+    ++current_index_;
     return blocks_.back();
 }
 
@@ -59,7 +70,7 @@ int Buffer::write_buffer_cache(int fd) {
         BufferBlock& block = *iter;
         if (block.empty())
             break;
-        n = ::write(fd, &block.data_[block.read_index_], block.get_free_space());
+        n = ::write(fd, &block.data_[block.read_index_], block.get_used_space());
         if (n <= 0)
             break;
          block.read_index_ += n;
@@ -69,26 +80,41 @@ int Buffer::write_buffer_cache(int fd) {
             ++iter;
         }
     }
-    if (iter != blocks_.begin())
-        blocks_.erase(blocks.begin(), iter);
-    for (auto& block : blocks)
+    if (iter != blocks_.begin()) {
+        current_index_ -= std::distance(blocks_.begin(), iter);
+        blocks_.erase(blocks_.begin(), iter);
+    }
+    for (auto& block : blocks) {
+        if (blocks_.size() > DEFAUTL_MAX_BUFFER_NUM)
+            break;
         blocks_.push_back(std::move(block));
+    }
     return n;
 }
 
-void Buffer::append_to_cache(const char* p, int n) {
-    int write;
-    while (n > 0) {
-        write = 0;
+void Buffer::append_to_cache(const char* p, int length) {
+    int n;
+    int write = 0;
+    while (length > 0) {
+        BufferBlock& block = get_available_block();
+        n = block.append_to_block(p + write, length);
+        length -= n;
+        write += n;
     }
 }
 
-int Buffer::write_socket(int fd, std::string&& message) {
+bool Buffer::has_data() {
+    if (blocks_.empty())
+        return false;
+    return blocks_[current_index_].get_used_space() != 0;
+}
+
+int Buffer::write_socket(int fd, const std::string& message) {
     const char* data = message.c_str();
     int index = 0;
     int length = message.size();
     int n;
-    if (!blocks_.empty()) {
+    if (has_data()) {
         n = write_buffer_cache(fd);
         if (n <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -109,17 +135,6 @@ int Buffer::write_socket(int fd, std::string&& message) {
     return n;
 }
 
-std::size_t Buffer::get_total_space() {
-    return blocks_.size() * DEFAULT_BUFFER_SIZE;
-}
-
-std::size_t Buffer::get_free_space() {
-    if (blocks_.empty())
-        return 0;
-    return (blocks_.size() - current_index_) * DEFAULT_BUFFER_SIZE +
-        blocks_[current_index_].get_free_space();
-}
-
 std::string Buffer::read_all() {
     if (blocks_.empty())
         return std::string();
@@ -132,6 +147,6 @@ std::string Buffer::read_all() {
         ss << block.to_string();
         block.reset();
     }
-    current_index_ = 0;
+    current_index_ = -1;
     return ss.str();
 }

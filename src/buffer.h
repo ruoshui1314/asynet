@@ -17,6 +17,7 @@ public:
     BufferBlock();
     BufferBlock(BufferBlock&& block);
     std::size_t get_free_space() { return data_.size() - write_index_; }
+    std::size_t get_used_space() { return write_index_ - read_index_; }
     std::size_t size() { return data_.size(); }
     std::string to_string();
     bool full();
@@ -27,6 +28,7 @@ public:
         read_index_ = block.read_index_;
         write_index_ = block.write_index_;
     }
+    int append_to_block(const char* p, int n);
 
 private:
     std::vector<char> data_;
@@ -39,21 +41,19 @@ using buffer_block_vec = std::vector<BufferBlock>;
 
 class Buffer {
 public:
-    Buffer();
+    Buffer() = default;
     BufferBlock& get_available_block();
-    std::size_t get_free_space();
-    std::size_t get_used_space();
-    std::size_t get_total_space();
     int read_socket(int fd);
-    int write_socket(int fd, std::string&& message);
+    int write_socket(int fd, const std::string& message);
     std::string read_all();
+    void append_to_cache(const char* p, int n);
+    void append_to_cache(const std::string& message);
+    int write_buffer_cache(int fd);
+    bool has_data();
 
 private:
-    int write_buffer_cache(int fd);
-    void append_to_cache(const char* p, int n);
-
     buffer_block_vec blocks_;
-    size_t current_index_;
+    int current_index_;
 };
 
 }
