@@ -23,7 +23,7 @@ void TcpConnection::on_read_callback(const tcp_connection_ptr& conn) {
         if (on_message_cb_)
             on_message_cb_(shared_from_this(), input_);
     } else if (n == 0) {
-        on_close_callback(conn, SocketError::EVENT_READING);
+        on_close_callback(conn, SocketError::EVENT_EOF);
     } else if (n == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
