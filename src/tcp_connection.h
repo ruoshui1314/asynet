@@ -33,7 +33,7 @@ public:
 
     void on_write_callback(const tcp_connection_ptr& conn);
 
-    void on_close_callback(const tcp_connection_ptr& conn);
+    void on_close_callback(const tcp_connection_ptr& conn, SocketError err);
 
     void send_message(std::string&& message);
 

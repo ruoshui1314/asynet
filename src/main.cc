@@ -20,8 +20,8 @@ void on_message(const tcp_connection_ptr& conn, Buffer& buffer) {
     conn->send_message(std::move(message));
 }
 
-void on_disconnect(const tcp_connection_ptr& conn, int error) {
-    cout << "on disconnect:" << error << endl;
+void on_disconnect(const tcp_connection_ptr& conn, SocketError error) {
+    cout << "on disconnect:" << static_cast<int>(error) << endl;
 }
 
 int main() {

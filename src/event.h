@@ -15,6 +15,7 @@ enum class EVENT_OPEATION {
 
 
 typedef std::function<void(void)> callback;
+typedef std::function<void(SocketError)> close_callback;
 
 enum class EVENT_STATE {
     INIT = 0,
@@ -28,7 +29,7 @@ public:
     Event(int fd);
     void set_read_callback(callback cb) { read_cb_ = std::move(cb); }
     void set_write_callback(callback cb) { write_cb_ = std::move(cb); }
-    void set_close_callback(callback cb) { close_cb_ = std::move(cb); }
+    void set_close_callback(close_callback cb) { close_cb_ = std::move(cb); }
 
     void handle_event();
 
@@ -47,7 +48,7 @@ private:
     EVENT_OPEATION operation_;
     callback read_cb_;
     callback write_cb_;
-    callback close_cb_;
+    close_callback close_cb_;
 };
 
 }

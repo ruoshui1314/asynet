@@ -14,5 +14,5 @@ void Event::handle_event() {
     else if (state_ == EVENT_STATE::WRITE && write_cb_)
         write_cb_();
     else if (state_ == EVENT_STATE::CLOSED && close_cb_)
-        close_cb_();
+        close_cb_(SocketError::EVENT_ERROR);
 }
