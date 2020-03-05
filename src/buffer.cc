@@ -40,15 +40,18 @@ std::string BufferBlock::to_string() {
 }
 
 BufferBlock& Buffer::get_available_block() {
-    if (current_index_ != -1 && current_index_ < blocks_.size()) {
-        if (blocks_[current_index_].get_free_space() != 0)
-            return blocks_[current_index_];
-        if (current_index_ + 1 < blocks_.size())
-            return blocks_[current_index_];
+    if (!used_blocks_.empty()) {
+        BufferBlock& block = used_blocks_.back();
+        if (block.get_free_space() != 0)
+            return block;
     }
-    blocks_.push_back(BufferBlock());
-    ++current_index_;
-    return blocks_.back();
+    if (!free_blocks_.empty()) {
+        used_blocks_.push_back(std::move(free_blocks_.front()));
+        free_blocks_.pop_front();
+    } else {
+        used_blocks_.push_back(BufferBlock());
+    }
+    return used_blocks_.back();
 }
 
 int Buffer::read_socket(int fd) {
@@ -62,37 +65,23 @@ int Buffer::read_socket(int fd) {
     return n;
 }
 
-int Buffer::write_buffer_cache(int fd) {
+int Buffer::send_buffer_cache(int fd) {
     int n;
-    auto iter = blocks_.begin();
-    buffer_block_vec blocks;
-    while (iter != blocks_.end()) {
-        BufferBlock& block = *iter;
-        if (block.empty())
-            break;
+    while (!used_blocks_.empty()) {
+        BufferBlock& block = used_blocks_.front();
         n = ::write(fd, &block.data_[block.read_index_], block.get_used_space());
         if (n <= 0)
             break;
          block.read_index_ += n;
-        if (block.full()) {
-            block.reset();
-            blocks.push_back(std::move(block));
-            ++iter;
-        }
-    }
-    if (iter != blocks_.begin()) {
-        current_index_ -= std::distance(blocks_.begin(), iter);
-        blocks_.erase(blocks_.begin(), iter);
-    }
-    for (auto& block : blocks) {
-        if (blocks_.size() > DEFAUTL_MAX_BUFFER_NUM)
-            break;
-        blocks_.push_back(std::move(block));
+        if (!block.full())
+            continue;
+        add_to_free_list(std::move(block));
+        used_blocks_.pop_front();
     }
     return n;
 }
 
-void Buffer::append_to_cache(const char* p, int length) {
+void Buffer::append_to_buffer(const char* p, int length) {
     int n;
     int write = 0;
     while (length > 0) {
@@ -103,22 +92,16 @@ void Buffer::append_to_cache(const char* p, int length) {
     }
 }
 
-bool Buffer::has_data() {
-    if (blocks_.empty())
-        return false;
-    return blocks_[current_index_].get_used_space() != 0;
-}
-
 int Buffer::write_socket(int fd, const std::string& message) {
     const char* data = message.c_str();
     int index = 0;
     int length = message.size();
     int n;
-    if (has_data()) {
-        n = write_buffer_cache(fd);
+    if (!used_blocks_.empty()) {
+        n = send_buffer_cache(fd);
         if (n <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
-                append_to_cache(data, length);
+                append_to_buffer(data, length);
             return n;
         }
     }
@@ -126,7 +109,7 @@ int Buffer::write_socket(int fd, const std::string& message) {
         n = ::write(fd, data, length);
         if (n <= 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
-                append_to_cache(data, length);
+                append_to_buffer(data, length);
             return n;
         }
         data += n;
@@ -136,17 +119,20 @@ int Buffer::write_socket(int fd, const std::string& message) {
 }
 
 std::string Buffer::read_all() {
-    if (blocks_.empty())
+    if (used_blocks_.empty())
         return std::string();
-    BufferBlock& block = blocks_[current_index_];
-    if (block.read_index_ == block.write_index_)
-        return std::string();
-
     std::stringstream ss;
-    for (auto& block : blocks_) {
+    for (auto& block : used_blocks_) {
         ss << block.to_string();
-        block.reset();
+        add_to_free_list(std::move(block));
     }
-    current_index_ = -1;
+    used_blocks_.clear();
     return ss.str();
+}
+
+void Buffer::add_to_free_list(BufferBlock&& block) {
+    if (free_blocks_.size() > DEFAUTL_MAX_BUFFER_NUM)
+        return;
+    block.reset();
+    free_blocks_.push_back(std::forward<BufferBlock>(block));
 }

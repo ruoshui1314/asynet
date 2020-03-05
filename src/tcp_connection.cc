@@ -32,9 +32,9 @@ void TcpConnection::on_read_callback(const tcp_connection_ptr& conn) {
 }
 
 void TcpConnection::on_write_callback(const tcp_connection_ptr& conn) {
-    if (!output_.has_data())
+    if (!output_.empty())
         return;
-    int n = output_.write_buffer_cache(socket_.get_fd());
+    int n = output_.send_buffer_cache(socket_.get_fd());
     if (n == 0)
         on_close_callback(conn, SocketError::EVENT_EOF);
 }

@@ -37,7 +37,7 @@ private:
     friend Buffer;
 };
 
-using buffer_block_vec = std::vector<BufferBlock>;
+using buffer_block_list = std::list<BufferBlock>;
 
 class Buffer {
 public:
@@ -46,14 +46,14 @@ public:
     int read_socket(int fd);
     int write_socket(int fd, const std::string& message);
     std::string read_all();
-    void append_to_cache(const char* p, int n);
-    void append_to_cache(const std::string& message);
-    int write_buffer_cache(int fd);
-    bool has_data();
+    void append_to_buffer(const char* p, int n);
+    int send_buffer_cache(int fd);
+    bool empty() { return used_blocks_.empty(); }
 
 private:
-    buffer_block_vec blocks_;
-    int current_index_;
+    void add_to_free_list(BufferBlock&& block);
+    buffer_block_list used_blocks_;
+    buffer_block_list free_blocks_;
 };
 
 }
