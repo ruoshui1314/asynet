@@ -45,7 +45,8 @@ bool Acceptor::listen() {
 }
 
 bool Acceptor::enable_read() {
-    return loop_.add_read_event(event_.get());
+    event_->update_mask(loop_.get_read_mask());
+    return loop_.add_event(event_.get());
 }
 
 void Acceptor::set_on_connect_callback(on_connect_callback& cb) {
@@ -83,8 +84,8 @@ void Acceptor::handle_read_callback() {
     std::string addr(ip);
     std::string port_s(std::to_string(port));
     tcp_connection_ptr connection =
-        std::make_shared<TcpConnection>(fd, addr, port_s);
-    connection->enable_read(loop_);
+        std::make_shared<TcpConnection>(loop_, fd, addr, port_s);
+    connection->enable_read();
     if (on_connect_cb_)
         on_connect_cb_(connection);
     if (on_message_cb_)

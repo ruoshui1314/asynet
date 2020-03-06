@@ -24,7 +24,12 @@ bool EpollReactor::add_event(Event* event) {
 }
 
 bool EpollReactor::del_event(Event* event) {
-
+    struct epoll_event ee;
+    ::bzero(&ee, sizeof(ee));
+    ee.data.ptr = event;
+    ee.events = event->get_mask();
+    int op = EPOLL_CTL_DEL;
+    return epoll_ctl(epoll_fd_, op, event->get_fd(), &ee) != -1;
 }
 
 int EpollReactor::get_read_mask() {

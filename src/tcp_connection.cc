@@ -3,18 +3,25 @@
 
 using namespace asynet;
 
-TcpConnection::TcpConnection(int fd,
+TcpConnection::TcpConnection(EventLoop& loop, int fd,
                 const std::string& address,
                 const std::string& port) :
+    loop_(loop),
     socket_(address, port, fd) {
         event_ = std::unique_ptr<Event>(new Event(fd));
 }
 
-void TcpConnection::enable_read(EventLoop& loop) {
+void TcpConnection::enable_read() {
     tcp_connection_ptr conn = shared_from_this();
     event_->set_close_callback([=](SocketError err) { conn->on_close_callback(conn, err); });
     event_->set_read_callback([=]() { conn->on_read_callback(conn); });
-    loop.add_read_event(event_.get());
+    event_->update_mask(loop_.get_read_mask());
+    loop_.add_event(event_.get());
+}
+
+void TcpConnection::disable_read() {
+    event_->del_mask(loop_.get_read_mask());
+    loop_.del_event(event_.get());
 }
 
 void TcpConnection::on_read_callback(const tcp_connection_ptr& conn) {
@@ -53,6 +60,8 @@ void TcpConnection::send_message(std::string&& message) {
 
 void TcpConnection::on_close_callback(const tcp_connection_ptr& conn, SocketError err) {
     socket_.close();
+    event_->reset_mask();
+    loop_.del_event(event_.get());
     if (on_disconnect_cb_)
         on_disconnect_cb_(shared_from_this(), err);
     event_.reset();

@@ -12,9 +12,10 @@ class EventLoop {
 public:
     EventLoop();
 
-    bool add_read_event(Event* event_);
+    bool add_event(Event* event);
+    bool del_event(Event* event);
     void run();
-
+    int get_read_mask() { return reactor_->get_read_mask(); }
 private:
     std::unique_ptr<Reactor> reactor_;
     bool running_;

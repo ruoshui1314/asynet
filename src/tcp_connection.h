@@ -15,7 +15,7 @@ class EventLoop;
 
 class TcpConnection: public std::enable_shared_from_this<TcpConnection> {
 public:
-    TcpConnection(int fd,
+    TcpConnection(EventLoop& loop, int fd,
                 const std::string& address,
                 const std::string& port);
     std::string get_address() { return socket_.get_address(); }
@@ -37,9 +37,12 @@ public:
 
     void send_message(std::string&& message);
 
-    void enable_read(EventLoop& loop);
+    void enable_read();
+
+    void disable_read();
 
 private:
+    EventLoop& loop_;
     std::unique_ptr<Event> event_;
     Socket socket_;
     on_message_callback on_message_cb_;

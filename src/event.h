@@ -38,6 +38,8 @@ public:
     EVENT_OPEATION get_operation() { return operation_; }
     void set_operation(const EVENT_OPEATION& op) { operation_ = op; }
     void update_mask(int mask) { mask_ |= mask; }
+    void del_mask(int mask) { mask_ &= ~mask; }
+    void reset_mask() { mask_ = 0; }
     int get_mask() { return mask_; }
     int get_fd() { return fd_; }
 

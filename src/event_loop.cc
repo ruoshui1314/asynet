@@ -10,9 +10,12 @@ EventLoop::EventLoop(): running_(true) {
     reactor_->init_reactor();
 }
 
-bool EventLoop::add_read_event(Event* event_) {
-    event_->update_mask(reactor_->get_read_mask());
-    return reactor_->add_event(event_);
+bool EventLoop::add_event(Event* event) {
+    return reactor_->add_event(event);
+}
+
+bool EventLoop::del_event(Event* event) {
+    return reactor_->del_event(event);
 }
 
 void EventLoop::run() {
