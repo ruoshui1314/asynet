@@ -2,12 +2,14 @@
 #include "epoll_reactor.h"
 
 #include <vector>
+#include <algorithm>
 
 using namespace asynet;
 
-EventLoop::EventLoop(): running_(true) {
+EventLoop::EventLoop(): running_(true), timer_event_(*this) {
     reactor_ = std::unique_ptr<EpollReactor>(new EpollReactor());
     reactor_->init_reactor();
+    timer_event_.create_timer_fd();
 }
 
 bool EventLoop::add_event(Event* event) {
@@ -16,6 +18,14 @@ bool EventLoop::add_event(Event* event) {
 
 bool EventLoop::del_event(Event* event) {
     return reactor_->del_event(event);
+}
+
+void EventLoop::add_timer(Timer* t, int index) {
+    timer_event_.add_timer(t, index);
+}
+
+void EventLoop::del_timer(Timer* t) {
+    timer_event_.del_timer(t);
 }
 
 void EventLoop::run() {

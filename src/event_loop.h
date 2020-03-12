@@ -4,6 +4,7 @@
 
 #include "event.h"
 #include "reactor.h"
+#include "timer.h"
 
 #include <memory>
 
@@ -13,13 +14,21 @@ public:
     EventLoop();
 
     bool add_event(Event* event);
+
     bool del_event(Event* event);
+
     void run();
+
     int get_read_mask() { return reactor_->get_read_mask(); }
+
+    void add_timer(Timer* t, int index);
+
+    void del_timer(Timer* t);
+
 private:
     std::unique_ptr<Reactor> reactor_;
     bool running_;
-
+    TimerEvent timer_event_;
 };
 
 }
