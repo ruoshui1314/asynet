@@ -33,7 +33,7 @@ bool EpollReactor::del_event(Event* event) {
 }
 
 int EpollReactor::get_read_mask() {
-    return EPOLLIN | EPOLLPRI;
+    return EPOLLIN | EPOLLPRI | EPOLLET;
 }
 
 void EpollReactor::poll(std::vector<Event*>& events) {

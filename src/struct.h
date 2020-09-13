@@ -2,10 +2,12 @@
 #define ASYNET_STRUCT_H_
 
 #include <memory>
+#include <functional>
 
 namespace asynet {
 
 const unsigned int OPT_REUSEABLE_PORT = 1;
+const int MAX_VARIABLE_CONDITION_NUM = 4;
 
 class TcpConnection;
 class Buffer;

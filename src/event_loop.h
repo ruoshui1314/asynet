@@ -5,13 +5,14 @@
 #include "event.h"
 #include "reactor.h"
 #include "timer.h"
+#include "task_control.h"
 
 #include <memory>
 
 namespace asynet {
 class EventLoop {
 public:
-    EventLoop();
+    EventLoop(int thread_num = std::thread::hardware_concurrency());
 
     bool add_event(Event* event);
 
@@ -25,8 +26,11 @@ public:
 
     void del_timer(Timer* t);
 
+    void add_task(task t, void* arg = nullptr);
+
 private:
     std::unique_ptr<Reactor> reactor_;
+    TaskControl control_;
     bool running_;
     TimerEvent timer_event_;
 };

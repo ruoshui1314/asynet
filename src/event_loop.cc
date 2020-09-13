@@ -6,7 +6,9 @@
 
 using namespace asynet;
 
-EventLoop::EventLoop(): running_(true), timer_event_(*this) {
+EventLoop::EventLoop(int thread_num): running_(true),
+    timer_event_(*this),
+    control_(thread_num) {
     reactor_ = std::unique_ptr<EpollReactor>(new EpollReactor());
     reactor_->init_reactor();
     timer_event_.create_timer_fd();
@@ -26,6 +28,10 @@ void EventLoop::add_timer(Timer* t, int index) {
 
 void EventLoop::del_timer(Timer* t) {
     timer_event_.del_timer(t);
+}
+
+void EventLoop::add_task(task t, void* arg) {
+    control_.add_task(t, arg);
 }
 
 void EventLoop::run() {

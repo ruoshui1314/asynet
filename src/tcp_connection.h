@@ -29,11 +29,11 @@ public:
         on_disconnect_cb_ = cb;
     }
 
-    void on_read_callback(const tcp_connection_ptr& conn);
+    void on_read_callback();
 
-    void on_write_callback(const tcp_connection_ptr& conn);
+    void on_write_callback();
 
-    void on_close_callback(const tcp_connection_ptr& conn, SocketError err);
+    void on_close_callback(SocketError err);
 
     void send_message(std::string&& message);
 
