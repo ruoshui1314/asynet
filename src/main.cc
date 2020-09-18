@@ -17,7 +17,7 @@ void on_connect(const tcp_connection_ptr& conn) {
     cout << conn->get_address() << ":" << conn->get_port() << " connected." << endl;
 }
 
-void on_message(const tcp_connection_ptr& conn, Buffer& buffer) {
+void on_message(const tcp_connection_ptr& conn, ReadBuffer& buffer) {
     std::string message = buffer.read_all();
     cout << "on message:" << message << endl;
     conn->send_message(std::move(message));

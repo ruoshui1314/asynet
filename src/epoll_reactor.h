@@ -18,6 +18,7 @@ public:
     bool add_event(Event* event) override;
     bool del_event(Event* event) override;
     int get_read_mask() override;
+    int get_write_mask() override;
     void poll(std::vector<Event*>& events) override;
 
 private:

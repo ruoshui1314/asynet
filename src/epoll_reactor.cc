@@ -36,6 +36,10 @@ int EpollReactor::get_read_mask() {
     return EPOLLIN | EPOLLPRI | EPOLLET;
 }
 
+int EpollReactor::get_write_mask() {
+    return EPOLLOUT;
+}
+
 void EpollReactor::poll(std::vector<Event*>& events) {
     int res = epoll_wait(epoll_fd_, events_, MAX_EVENTS, -1);
     if (res < 0)

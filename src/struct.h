@@ -10,7 +10,7 @@ const unsigned int OPT_REUSEABLE_PORT = 1;
 const int MAX_VARIABLE_CONDITION_NUM = 4;
 
 class TcpConnection;
-class Buffer;
+class ReadBuffer;
 
 enum class SocketError {
     EVENT_READING = 1, /**< error encountered while reading */
@@ -23,7 +23,7 @@ enum class SocketError {
 
 using tcp_connection_ptr = std::shared_ptr<TcpConnection>;
 using on_connect_callback = std::function<void(const tcp_connection_ptr&)>;
-using on_message_callback = std::function<void(const tcp_connection_ptr&, Buffer&)>;
+using on_message_callback = std::function<void(const tcp_connection_ptr&, ReadBuffer&)>;
 using on_disconnect_callback = std::function<void(const tcp_connection_ptr&, SocketError error)>;
 
 }

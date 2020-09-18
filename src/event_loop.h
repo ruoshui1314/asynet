@@ -22,6 +22,8 @@ public:
 
     int get_read_mask() { return reactor_->get_read_mask(); }
 
+    int get_write_mask() { return reactor_->get_write_mask(); }
+
     void add_timer(Timer* t, int index);
 
     void del_timer(Timer* t);

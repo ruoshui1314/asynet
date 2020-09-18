@@ -8,7 +8,8 @@ TcpConnection::TcpConnection(EventLoop& loop, int fd,
                 const std::string& address,
                 const std::string& port) :
     loop_(loop),
-    socket_(address, port, fd) {
+    socket_(address, port, fd),
+    connected_(true) {
         event_ = std::unique_ptr<Event>(new Event(fd));
 }
 
@@ -25,14 +26,24 @@ void TcpConnection::enable_read() {
     loop_.add_event(event_.get());
 }
 
+void TcpConnection::enable_write() {
+    event_->update_mask(loop_.get_write_mask());
+    loop_.add_event(event_.get());
+}
+
 void TcpConnection::disable_read() {
     event_->del_mask(loop_.get_read_mask());
-    loop_.del_event(event_.get());
+    loop_.add_event(event_.get());
+}
+
+void TcpConnection::disable_write() {
+    event_->del_mask(loop_.get_write_mask());
+    loop_.add_event(event_.get());
 }
 
 void TcpConnection::on_read_callback() {
     std::cout << "on read callback" << std::endl;
-    int n = input_.read_socket(socket_.get_fd());
+    int n = input_.read_fd(socket_.get_fd());
     if (n > 0) {
         if (on_message_cb_)
             on_message_cb_(shared_from_this(), input_);
@@ -45,31 +56,47 @@ void TcpConnection::on_read_callback() {
     }
 }
 
-void TcpConnection::on_write_callback() {
-    if (!output_.empty())
+void TcpConnection::send_message(const std::string& message) {
+    if (!connected_)
         return;
-    int n = output_.send_buffer_cache(socket_.get_fd());
-    if (n == 0)
-        on_close_callback(SocketError::EVENT_EOF);
+    int n = output_.write_fd(socket_.get_fd(), message);
+    if (n <= 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            enable_write();
+            return;
+        }
+        on_close_callback(SocketError::EVENT_WRITING);
+        return;
+    }
+    if (!output_.is_complete())
+        loop_.add_task(std::bind(&asynet::TcpConnection::on_write_callback, shared_from_this()));
 }
 
-void TcpConnection::send_message(std::string&& message) {
-    int n = output_.write_socket(socket_.get_fd(), std::forward<std::string>(message));
-    if (n == 0) {
-        on_close_callback(SocketError::EVENT_EOF);
+void TcpConnection::on_write_callback() {
+    if (!connected_)
+        return;
+    int n = output_.keep_write(socket_.get_fd());
+    if (n > 0) {
+        disable_write();
+        return;
     }
-    if (n == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
-        on_close_callback(SocketError::EVENT_WRITING);
+
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        enable_write();
     }
+    on_close_callback(SocketError::EVENT_WRITING);
 }
 
 void TcpConnection::on_close_callback(SocketError err) {
+    if (!connected_)
+        return;
+    connected_ = false;
     socket_.close();
     event_->reset_mask();
     loop_.del_event(event_.get());
+    event_.reset();
     if (on_disconnect_cb_)
         on_disconnect_cb_(shared_from_this(), err);
-    event_.reset();
+    input_.clear();
+    output_.clear();
 }

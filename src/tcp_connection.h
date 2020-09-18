@@ -35,11 +35,17 @@ public:
 
     void on_close_callback(SocketError err);
 
-    void send_message(std::string&& message);
+    void send_message(const std::string& message);
 
     void enable_read();
 
+    void enable_write();
+
     void disable_read();
+
+    void disable_write();
+
+    void keep_write();
 
 private:
     EventLoop& loop_;
@@ -47,8 +53,9 @@ private:
     Socket socket_;
     on_message_callback on_message_cb_;
     on_disconnect_callback on_disconnect_cb_;
-    Buffer input_;
-    Buffer output_;
+    ReadBuffer input_;
+    WriteBuffer output_;
+    bool connected_;
 };
 
 }
