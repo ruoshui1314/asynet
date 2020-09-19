@@ -28,8 +28,8 @@ uint64_t Timer::now() {
 }
 
 void Timer::run_every(double delay_seconds, timer_callback cb) {
-    interval_ = delay_seconds;
     run_after(delay_seconds, cb);
+    interval_ = delay_seconds;
 }
 
 void Timer::run_at(uint64_t time, timer_callback cb) {
@@ -139,7 +139,7 @@ bool TimerEvent::create_timer_fd() {
 
 void TimerEvent::handle_read_callback() {
     uint64_t time;
-    ssize_t n = ::read(timer_fd_, &time, sizeof(time));
+    ::read(timer_fd_, &time, sizeof(time));
     uint64_t now = Timer::now();
     std::vector<Timer*> timers;
     while (!heap_.empty()) {
@@ -164,7 +164,7 @@ void TimerEvent::update_time() {
     struct itimerspec time_spec;
     bzero(&time_spec, sizeof(time_spec));
     if (heap_.empty()) {
-        int ret = ::timerfd_settime(timer_fd_, 0, &time_spec, nullptr);
+        ::timerfd_settime(timer_fd_, 0, &time_spec, nullptr);
         return;
     }
     Timer* time = heap_.top();
@@ -175,7 +175,7 @@ void TimerEvent::update_time() {
         time_spec.it_value.tv_sec = diff / MICROSECOND_PER_SECOND;
         time_spec.it_value.tv_nsec = diff % MICROSECOND_PER_SECOND * 1000;
     }
-    int ret = ::timerfd_settime(timer_fd_, 0, &time_spec, nullptr);
+    ::timerfd_settime(timer_fd_, 0, &time_spec, nullptr);
 }
 
 

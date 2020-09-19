@@ -57,8 +57,6 @@ void TcpConnection::on_read_callback() {
 }
 
 void TcpConnection::send_message(const std::string& message) {
-    if (!connected_)
-        return;
     int n = output_.write_fd(socket_.get_fd(), message);
     if (n <= 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -73,8 +71,6 @@ void TcpConnection::send_message(const std::string& message) {
 }
 
 void TcpConnection::on_write_callback() {
-    if (!connected_)
-        return;
     int n = output_.keep_write(socket_.get_fd());
     if (n > 0) {
         disable_write();
@@ -87,9 +83,17 @@ void TcpConnection::on_write_callback() {
     on_close_callback(SocketError::EVENT_WRITING);
 }
 
+void TcpConnection::close() {
+    socket_.close();
+    connected_ = false;
+    event_->reset_mask();
+    loop_.del_event(event_.get());
+    event_.reset();
+    input_.clear();
+    output_.clear();
+}
+
 void TcpConnection::on_close_callback(SocketError err) {
-    if (!connected_)
-        return;
     connected_ = false;
     socket_.close();
     event_->reset_mask();

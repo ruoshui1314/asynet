@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <atomic>
-#include <list>
+#include <mutex>
 
 namespace asynet {
 
@@ -74,11 +74,14 @@ public:
 private:
     int write_fd(int fd, BufferBlock* head);
 
-    bool is_write_complete(BufferBlock* old_head, bool single);
+    bool is_write_complete(BufferBlock* old_head, bool single, BufferBlock** new_tail);
+
+    void release_buffer();
 
 private:
     const size_t MAX_IOVEC_NUM = 16;
     std::atomic<BufferBlock*> head_;
+    std::mutex mutex_;
     BufferBlock* write_head_;
     BufferBlock* write_tail_;
     bool complete_;

@@ -47,6 +47,8 @@ public:
 
     void keep_write();
 
+    void close();
+
 private:
     EventLoop& loop_;
     std::unique_ptr<Event> event_;

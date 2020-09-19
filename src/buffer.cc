@@ -121,11 +121,14 @@ int WriteBuffer::write_fd(int fd, const std::string& msg) {
         return n;
     req->index_ += n;
 
-    complete_ = is_write_complete(req, true);
-    if (complete_)
+    complete_ = is_write_complete(req, true, nullptr);
+    if (complete_) {
         delete req;
-    else
+    } else {
+        std::lock_guard<std::mutex> lk(mutex_);
         write_head_ = req;
+        write_tail_ = req;
+    }
     return n;
 }
 
@@ -144,6 +147,7 @@ int WriteBuffer::write_fd(int fd, BufferBlock* head) {
 }
 
 int WriteBuffer::keep_write(int fd) {
+    std::lock_guard<std::mutex> lk(mutex_);
     while (1) {
         if (write_head_->next_ != nullptr && write_head_->empty()) {
             BufferBlock* save = write_head_;
@@ -166,9 +170,8 @@ int WriteBuffer::keep_write(int fd) {
                 delete cur;
             }
         }
-        // Return when there's no more WriteRequests and req is completely
-        // written.
-        complete_ = is_write_complete(write_tail_, (write_head_ == write_tail_));
+        // Return when there's no more WriteRequests and req is completely written.
+        complete_ = is_write_complete(write_tail_, (write_head_ == write_tail_), &write_tail_);
         if (complete_) {
             delete write_head_;
             write_head_ = nullptr;
@@ -179,18 +182,19 @@ int WriteBuffer::keep_write(int fd) {
     }
 }
 
-bool WriteBuffer::is_write_complete(BufferBlock* old_head, bool single) {
+bool WriteBuffer::is_write_complete(BufferBlock* old_head, bool single, BufferBlock** new_tail) {
     bool no_data = true;
     BufferBlock* desired = nullptr;
-    if (!old_head->empty() || !single) {
+    if (!old_head->empty() || !single)
         desired = old_head;
-        // Write is obviously not complete if old_head is not fully written.
-        complete_ = false;
-    }
+
     // Remove block when data has been sended.
     BufferBlock* new_head = old_head;
-    if (head_.compare_exchange_strong(new_head, desired, std::memory_order_acquire))
+    if (head_.compare_exchange_strong(new_head, desired, std::memory_order_acquire)) {
+        if (new_tail)
+            *new_tail = new_head;
         return no_data;
+    }
 
     // Added new requests.
     BufferBlock* tail = nullptr;
@@ -204,32 +208,27 @@ bool WriteBuffer::is_write_complete(BufferBlock* old_head, bool single) {
 
     // Link old list with new list.
     old_head->next_ = new_head;
-    write_tail_ = new_head;
+    if (new_tail)
+        *new_tail = new_head;
     return false;
 }
 
-void WriteBuffer::clear() {
-    complete_ = true;
-    BufferBlock* head = head_.exchange(nullptr, std::memory_order_relaxed);
-    if (head) {
-        BufferBlock* tail = nullptr;
-        BufferBlock* p = head;
-        do {
-            BufferBlock* next = p->next_;
-            p->next_ = tail;
-            tail = p;
-            p = next;
-        } while (p != write_tail_);
-        if (write_tail_)
-            write_tail_->next_ = head;
-    }
-    BufferBlock* cur = write_head_;
-    BufferBlock* next;
-    while (cur) {
-        next = cur->next_;
-        delete cur;
-        cur = next;
-    }
+void WriteBuffer::release_buffer() {
+    do {
+        BufferBlock* next;
+        while (write_head_->next_ != nullptr) {
+            next = write_head_->next_;
+            delete write_head_;
+            write_head_ = next;
+        }
+    } while (!is_write_complete(write_head_, true, nullptr));
+    delete write_head_;
     write_head_ = nullptr;
     write_tail_ = nullptr;
+    complete_ = true;
+}
+
+void WriteBuffer::clear() {
+    std::lock_guard<std::mutex> lk(mutex_);
+    release_buffer();
 }
